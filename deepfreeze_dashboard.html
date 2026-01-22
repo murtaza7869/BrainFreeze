@@ -1,0 +1,1061 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DeepFreeze Cloud Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f5f7fa;
+            color: #2d3748;
+            line-height: 1.6;
+        }
+        
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+            padding: 24px;
+        }
+        
+        .header {
+            background: white;
+            padding: 32px;
+            border-radius: 12px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            margin-bottom: 24px;
+        }
+        
+        .header h1 {
+            font-size: 28px;
+            font-weight: 600;
+            color: #1a202c;
+            margin-bottom: 8px;
+        }
+        
+        .header-subtitle {
+            color: #718096;
+            font-size: 14px;
+        }
+        
+        .filters {
+            background: white;
+            padding: 24px;
+            border-radius: 12px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            margin-bottom: 24px;
+        }
+        
+        .filter-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            margin-bottom: 16px;
+        }
+        
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+        
+        .filter-label {
+            font-size: 13px;
+            font-weight: 500;
+            color: #4a5568;
+        }
+        
+        .filter-input {
+            padding: 10px 12px;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: all 0.2s;
+            background: white;
+        }
+        
+        .filter-input:focus {
+            outline: none;
+            border-color: #4299e1;
+            box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.1);
+        }
+        
+        .filter-actions {
+            display: flex;
+            gap: 12px;
+            margin-top: 8px;
+        }
+        
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .btn-primary {
+            background: #4299e1;
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: #3182ce;
+        }
+        
+        .btn-secondary {
+            background: #edf2f7;
+            color: #4a5568;
+        }
+        
+        .btn-secondary:hover {
+            background: #e2e8f0;
+        }
+        
+        .btn-success {
+            background: #48bb78;
+            color: white;
+        }
+        
+        .btn-success:hover {
+            background: #38a169;
+        }
+        
+        .metrics {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+        
+        .metric-card {
+            background: white;
+            padding: 24px;
+            border-radius: 12px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            cursor: pointer;
+            transition: all 0.2s;
+            border-left: 4px solid;
+        }
+        
+        .metric-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+        
+        .metric-card.blue { border-color: #4299e1; }
+        .metric-card.green { border-color: #48bb78; }
+        .metric-card.orange { border-color: #ed8936; }
+        .metric-card.red { border-color: #f56565; }
+        
+        .metric-label {
+            font-size: 13px;
+            font-weight: 500;
+            color: #718096;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 8px;
+        }
+        
+        .metric-value {
+            font-size: 36px;
+            font-weight: 700;
+            color: #1a202c;
+            line-height: 1;
+            margin-bottom: 4px;
+        }
+        
+        .metric-subtitle {
+            font-size: 13px;
+            color: #a0aec0;
+        }
+        
+        .chart-grid {
+            display: grid;
+            grid-template-columns: repeat(12, 1fr);
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+        
+        .chart-card {
+            background: white;
+            padding: 24px;
+            border-radius: 12px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        
+        .chart-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #2d3748;
+            margin-bottom: 20px;
+            padding-bottom: 12px;
+            border-bottom: 2px solid #f7fafc;
+        }
+        
+        .col-6 { grid-column: span 6; }
+        .col-12 { grid-column: span 12; }
+        
+        .heatmap-wrapper {
+            overflow-x: auto;
+            margin-top: 16px;
+        }
+        
+        .heatmap {
+            display: grid;
+            grid-template-columns: 80px repeat(24, 40px);
+            gap: 4px;
+            min-width: 1040px;
+        }
+        
+        .heatmap-cell {
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 11px;
+            font-weight: 500;
+            border-radius: 4px;
+            transition: all 0.2s;
+        }
+        
+        .heatmap-header {
+            background: #f7fafc;
+            color: #4a5568;
+            font-weight: 600;
+        }
+        
+        .heatmap-cell:not(.heatmap-header):hover {
+            transform: scale(1.1);
+            z-index: 10;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        }
+        
+        .table-wrapper {
+            overflow-x: auto;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+        }
+        
+        thead {
+            background: #f7fafc;
+        }
+        
+        th {
+            padding: 12px 16px;
+            text-align: left;
+            font-size: 12px;
+            font-weight: 600;
+            color: #4a5568;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border-bottom: 2px solid #e2e8f0;
+        }
+        
+        td {
+            padding: 14px 16px;
+            border-bottom: 1px solid #f7fafc;
+            font-size: 14px;
+        }
+        
+        tbody tr {
+            transition: background 0.2s;
+            cursor: pointer;
+        }
+        
+        tbody tr:hover {
+            background: #f7fafc;
+        }
+        
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+        
+        .badge-success { background: #c6f6d5; color: #22543d; }
+        .badge-warning { background: #feebc8; color: #744210; }
+        .badge-danger { background: #fed7d7; color: #742a2a; }
+        .badge-info { background: #bee3f8; color: #2c5282; }
+        
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            padding: 40px 20px;
+            overflow-y: auto;
+        }
+        
+        .modal-content {
+            background: white;
+            max-width: 900px;
+            margin: 0 auto;
+            border-radius: 12px;
+            padding: 32px;
+            position: relative;
+            animation: modalSlide 0.3s ease;
+        }
+        
+        @keyframes modalSlide {
+            from { opacity: 0; transform: translateY(-20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .modal-close {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            background: #f7fafc;
+            border: none;
+            cursor: pointer;
+            font-size: 20px;
+            color: #718096;
+            transition: all 0.2s;
+        }
+        
+        .modal-close:hover {
+            background: #e2e8f0;
+            color: #2d3748;
+        }
+        
+        .modal h2 {
+            font-size: 24px;
+            color: #1a202c;
+            margin-bottom: 8px;
+        }
+        
+        .modal-info {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            margin: 24px 0;
+            padding: 20px;
+            background: #f7fafc;
+            border-radius: 8px;
+        }
+        
+        .info-item {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+        
+        .info-label {
+            font-size: 12px;
+            font-weight: 500;
+            color: #718096;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .info-value {
+            font-size: 16px;
+            font-weight: 600;
+            color: #2d3748;
+        }
+        
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #f7fafc; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e0; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #a0aec0; }
+        
+        .loading {
+            text-align: center;
+            padding: 60px;
+            color: #718096;
+        }
+        
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid #f7fafc;
+            border-top-color: #4299e1;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin: 0 auto 16px;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #a0aec0;
+        }
+        
+        .empty-state-icon {
+            font-size: 48px;
+            margin-bottom: 16px;
+        }
+        
+        @media (max-width: 768px) {
+            .container { padding: 16px; }
+            .header { padding: 24px; }
+            .header h1 { font-size: 24px; }
+            .col-6 { grid-column: span 12; }
+            .metric-value { font-size: 28px; }
+            .filter-grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>DeepFreeze Cloud Dashboard</h1>
+            <p class="header-subtitle" id="dateRange">Loading...</p>
+        </div>
+
+        <div class="filters">
+            <div class="filter-grid">
+                <div class="filter-group">
+                    <label class="filter-label">Group</label>
+                    <select id="groupFilter" class="filter-input">
+                        <option value="all">All Groups</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label class="filter-label">Task Type</label>
+                    <select id="taskFilter" class="filter-input">
+                        <option value="all">All Tasks</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label class="filter-label">Date From</label>
+                    <input type="date" id="dateStart" class="filter-input">
+                </div>
+                <div class="filter-group">
+                    <label class="filter-label">Date To</label>
+                    <input type="date" id="dateEnd" class="filter-input">
+                </div>
+                <div class="filter-group">
+                    <label class="filter-label">Search Computer</label>
+                    <input type="text" id="searchBox" class="filter-input" placeholder="Enter computer name...">
+                </div>
+            </div>
+            <div class="filter-actions">
+                <button class="btn btn-primary" onclick="applyFilters()">Apply Filters</button>
+                <button class="btn btn-secondary" onclick="resetFilters()">Reset</button>
+                <button class="btn btn-success" onclick="exportToCSV()">Export CSV</button>
+            </div>
+        </div>
+
+        <div class="metrics" id="metricsGrid"></div>
+
+        <div class="chart-grid">
+            <div class="chart-card col-6">
+                <h3 class="chart-title">Daily Task Trend (Last 14 Days)</h3>
+                <canvas id="trendChart"></canvas>
+            </div>
+            <div class="chart-card col-6">
+                <h3 class="chart-title">Task Type Distribution</h3>
+                <canvas id="taskChart"></canvas>
+            </div>
+            <div class="chart-card col-6">
+                <h3 class="chart-title">Top 10 Groups by Activity</h3>
+                <canvas id="groupChart"></canvas>
+            </div>
+            <div class="chart-card col-6">
+                <h3 class="chart-title">Workstation Health Status</h3>
+                <canvas id="healthChart"></canvas>
+            </div>
+            <div class="chart-card col-12">
+                <h3 class="chart-title">Activity Heatmap - Day × Hour</h3>
+                <div class="heatmap-wrapper">
+                    <div id="heatmapGrid" class="heatmap"></div>
+                </div>
+            </div>
+            <div class="chart-card col-12">
+                <h3 class="chart-title">All Workstations</h3>
+                <div class="table-wrapper">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Computer Name</th>
+                                <th>Group</th>
+                                <th>Tags</th>
+                                <th>Tasks</th>
+                                <th>Last Activity</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="computersTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="modal" class="modal">
+        <div class="modal-content">
+            <button class="modal-close" onclick="closeModal()">×</button>
+            <div id="modalContent"></div>
+        </div>
+    </div>
+
+    <script src="dashboard_data.json"></script>
+    <script>
+        let dashboardData = null;
+        let filteredData = null;
+        let charts = {};
+
+        async function loadData() {
+            const container = document.querySelector('.container');
+            
+            try {
+                const response = await fetch('dashboard_data.json');
+                dashboardData = await response.json();
+                filteredData = JSON.parse(JSON.stringify(dashboardData));
+                initializeDashboard();
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Error loading data. Please ensure dashboard_data.json is in the same folder.');
+            }
+        }
+
+        function initializeDashboard() {
+            updateDateRange();
+            populateFilters();
+            renderMetrics();
+            renderCharts();
+            renderHeatmap();
+            renderComputersTable();
+        }
+
+        function updateDateRange() {
+            const start = new Date(dashboardData.metrics.date_range_start);
+            const end = new Date(dashboardData.metrics.date_range_end);
+            document.getElementById('dateRange').textContent = 
+                `${start.toLocaleDateString('en-US', {month: 'long', day: 'numeric', year: 'numeric'})} - ${end.toLocaleDateString('en-US', {month: 'long', day: 'numeric', year: 'numeric'})} • ${dashboardData.metrics.unique_computers} Workstations • ${dashboardData.metrics.total_tasks} Tasks`;
+            
+            document.getElementById('dateStart').value = dashboardData.metrics.date_range_start;
+            document.getElementById('dateEnd').value = dashboardData.metrics.date_range_end;
+        }
+
+        function populateFilters() {
+            const groupFilter = document.getElementById('groupFilter');
+            const taskFilter = document.getElementById('taskFilter');
+
+            dashboardData.groups.forEach(group => {
+                const option = document.createElement('option');
+                option.value = group.name;
+                option.textContent = `${group.name} (${group.task_count})`;
+                groupFilter.appendChild(option);
+            });
+
+            dashboardData.task_types.forEach(task => {
+                const option = document.createElement('option');
+                option.value = task.task;
+                option.textContent = `${task.task} (${task.count})`;
+                taskFilter.appendChild(option);
+            });
+        }
+
+        function renderMetrics() {
+            const grid = document.getElementById('metricsGrid');
+            const metrics = filteredData.metrics;
+            const critical = Object.values(filteredData.computer_task_counts).filter(c => c >= 10).length;
+            
+            grid.innerHTML = `
+                <div class="metric-card blue" onclick="showDetailsModal('tasks')">
+                    <div class="metric-label">Total Tasks</div>
+                    <div class="metric-value">${metrics.total_tasks.toLocaleString()}</div>
+                    <div class="metric-subtitle">${metrics.date_range_days} days monitored</div>
+                </div>
+                <div class="metric-card green" onclick="showDetailsModal('computers')">
+                    <div class="metric-label">Workstations</div>
+                    <div class="metric-value">${metrics.unique_computers}</div>
+                    <div class="metric-subtitle">Active devices</div>
+                </div>
+                <div class="metric-card green">
+                    <div class="metric-label">Success Rate</div>
+                    <div class="metric-value">${metrics.success_rate}%</div>
+                    <div class="metric-subtitle">Tasks executed</div>
+                </div>
+                <div class="metric-card blue">
+                    <div class="metric-label">Daily Average</div>
+                    <div class="metric-value">${Math.round(metrics.avg_tasks_per_day)}</div>
+                    <div class="metric-subtitle">Tasks per day</div>
+                </div>
+                <div class="metric-card ${critical > 0 ? 'red' : 'green'}" onclick="showDetailsModal('critical')">
+                    <div class="metric-label">Critical</div>
+                    <div class="metric-value">${critical}</div>
+                    <div class="metric-subtitle">Needs attention</div>
+                </div>
+                <div class="metric-card orange" onclick="showDetailsModal('groups')">
+                    <div class="metric-label">Groups</div>
+                    <div class="metric-value">${metrics.unique_groups}</div>
+                    <div class="metric-subtitle">Active groups</div>
+                </div>
+            `;
+        }
+
+        function renderCharts() {
+            const trendData = filteredData.daily_trend.slice(-14);
+            if (charts.trend) charts.trend.destroy();
+            charts.trend = new Chart(document.getElementById('trendChart'), {
+                type: 'line',
+                data: {
+                    labels: trendData.map(d => new Date(d.date).toLocaleDateString('en-US', {month: 'short', day: 'numeric'})),
+                    datasets: [{
+                        label: 'Tasks',
+                        data: trendData.map(d => d.total),
+                        borderColor: '#4299e1',
+                        backgroundColor: 'rgba(66, 153, 225, 0.1)',
+                        tension: 0.4,
+                        fill: true,
+                        borderWidth: 2,
+                        pointRadius: 4,
+                        pointHoverRadius: 6
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        y: { beginAtZero: true, grid: { color: '#f7fafc' } },
+                        x: { grid: { display: false } }
+                    }
+                }
+            });
+
+            if (charts.task) charts.task.destroy();
+            charts.task = new Chart(document.getElementById('taskChart'), {
+                type: 'doughnut',
+                data: {
+                    labels: filteredData.task_types.map(t => t.task),
+                    datasets: [{
+                        data: filteredData.task_types.map(t => t.count),
+                        backgroundColor: ['#4299e1', '#48bb78', '#ed8936', '#f56565'],
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    plugins: {
+                        legend: { position: 'bottom', labels: { padding: 15 } }
+                    }
+                }
+            });
+
+            const topGroups = filteredData.groups.sort((a, b) => b.task_count - a.task_count).slice(0, 10);
+            if (charts.group) charts.group.destroy();
+            charts.group = new Chart(document.getElementById('groupChart'), {
+                type: 'bar',
+                data: {
+                    labels: topGroups.map(g => g.name),
+                    datasets: [{
+                        label: 'Tasks',
+                        data: topGroups.map(g => g.task_count),
+                        backgroundColor: '#4299e1',
+                        borderRadius: 6
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    indexAxis: 'y',
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        x: { grid: { color: '#f7fafc' } },
+                        y: { grid: { display: false } }
+                    }
+                }
+            });
+
+            const counts = Object.values(filteredData.computer_task_counts);
+            const healthy = counts.filter(c => c <= 2).length;
+            const normal = counts.filter(c => c > 2 && c <= 5).length;
+            const elevated = counts.filter(c => c > 5 && c <= 10).length;
+            const critical = counts.filter(c => c > 10).length;
+
+            if (charts.health) charts.health.destroy();
+            charts.health = new Chart(document.getElementById('healthChart'), {
+                type: 'pie',
+                data: {
+                    labels: ['Healthy (1-2)', 'Normal (3-5)', 'Elevated (6-10)', 'Critical (10+)'],
+                    datasets: [{
+                        data: [healthy, normal, elevated, critical],
+                        backgroundColor: ['#48bb78', '#4299e1', '#ed8936', '#f56565'],
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    plugins: {
+                        legend: { position: 'bottom', labels: { padding: 15 } }
+                    }
+                }
+            });
+        }
+
+        function renderHeatmap() {
+            const grid = document.getElementById('heatmapGrid');
+            let html = '<div class="heatmap-cell heatmap-header"></div>';
+            
+            for (let h = 0; h < 24; h++) {
+                html += `<div class="heatmap-cell heatmap-header">${h.toString().padStart(2, '0')}</div>`;
+            }
+
+            filteredData.heatmap.forEach(day => {
+                html += `<div class="heatmap-cell heatmap-header">${day.day.slice(0, 3)}</div>`;
+                const maxVal = Math.max(...day.hours);
+                day.hours.forEach((count, hour) => {
+                    const intensity = maxVal > 0 ? count / maxVal : 0;
+                    let color = '#f7fafc';
+                    if (intensity > 0) {
+                        const r = Math.round(66 + (245 - 66) * intensity);
+                        const g = Math.round(153 + (101 - 153) * intensity);
+                        const b = Math.round(225 + (101 - 225) * intensity);
+                        color = `rgb(${r}, ${g}, ${b})`;
+                    }
+                    const textColor = intensity > 0.5 ? 'white' : '#4a5568';
+                    html += `<div class="heatmap-cell" style="background: ${color}; color: ${textColor}" title="${day.day} ${hour}:00 - ${count} tasks">${count || ''}</div>`;
+                });
+            });
+
+            grid.innerHTML = html;
+        }
+
+        function renderComputersTable() {
+            const tbody = document.getElementById('computersTableBody');
+            const computers = filteredData.computers.sort((a, b) => b.task_count - a.task_count);
+            
+            if (computers.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" class="empty-state"><div class="empty-state-icon">📭</div><div>No computers found</div></td></tr>';
+                return;
+            }
+            
+            tbody.innerHTML = computers.map(comp => {
+                let healthBadge = '';
+                if (comp.task_count >= 10) {
+                    healthBadge = '<span class="badge badge-danger">Critical</span>';
+                } else if (comp.task_count >= 5) {
+                    healthBadge = '<span class="badge badge-warning">Monitor</span>';
+                } else {
+                    healthBadge = '<span class="badge badge-success">Healthy</span>';
+                }
+
+                return `
+                    <tr onclick='showComputerDetails("${comp.name}")'>
+                        <td><strong>${comp.name}</strong></td>
+                        <td>${comp.group}</td>
+                        <td><span class="badge badge-info">${comp.tags}</span></td>
+                        <td><strong>${comp.task_count}</strong></td>
+                        <td>${new Date(comp.last_updated).toLocaleString()}</td>
+                        <td>${healthBadge}</td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function showComputerDetails(computerName) {
+            const computer = filteredData.computers.find(c => c.name === computerName);
+            if (!computer) return;
+
+            const tasksHtml = computer.tasks.map(task => `
+                <tr>
+                    <td>${task.task_name}</td>
+                    <td><span class="badge badge-success">${task.status}</span></td>
+                    <td>${new Date(task.timestamp).toLocaleString()}</td>
+                </tr>
+            `).join('');
+
+            document.getElementById('modalContent').innerHTML = `
+                <h2>${computer.name}</h2>
+                <div class="modal-info">
+                    <div class="info-item">
+                        <div class="info-label">Group</div>
+                        <div class="info-value">${computer.group}</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">Tags</div>
+                        <div class="info-value">${computer.tags}</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">Total Tasks</div>
+                        <div class="info-value">${computer.task_count}</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">Last Activity</div>
+                        <div class="info-value">${new Date(computer.last_updated).toLocaleDateString()}</div>
+                    </div>
+                </div>
+                <h3 style="margin-top: 24px; margin-bottom: 16px; font-size: 18px;">Task History</h3>
+                <div class="table-wrapper" style="max-height: 400px; overflow-y: auto;">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Task Name</th>
+                                <th>Status</th>
+                                <th>Timestamp</th>
+                            </tr>
+                        </thead>
+                        <tbody>${tasksHtml}</tbody>
+                    </table>
+                </div>
+            `;
+            document.getElementById('modal').style.display = 'block';
+        }
+
+        function showDetailsModal(type) {
+            let content = '';
+            
+            if (type === 'critical') {
+                const critical = filteredData.computers
+                    .filter(c => c.task_count >= 10)
+                    .sort((a, b) => b.task_count - a.task_count);
+                
+                if (critical.length === 0) {
+                    content = `<h2>Critical Workstations</h2><div class="empty-state"><div class="empty-state-icon">✅</div><div>No critical workstations</div></div>`;
+                } else {
+                    content = `
+                        <h2>Critical Workstations</h2>
+                        <p style="color: #718096; margin-bottom: 24px;">These workstations have 10 or more tasks.</p>
+                        <div class="table-wrapper" style="max-height: 500px; overflow-y: auto;">
+                            <table>
+                                <thead>
+                                    <tr><th>Computer</th><th>Group</th><th>Tasks</th><th>Last Activity</th></tr>
+                                </thead>
+                                <tbody>
+                                    ${critical.map(c => `
+                                        <tr onclick='closeModal(); showComputerDetails("${c.name}")'>
+                                            <td><strong>${c.name}</strong></td>
+                                            <td>${c.group}</td>
+                                            <td><span class="badge badge-danger">${c.task_count}</span></td>
+                                            <td>${new Date(c.last_updated).toLocaleString()}</td>
+                                        </tr>
+                                    `).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+                    `;
+                }
+            } else if (type === 'groups') {
+                const groups = filteredData.groups.sort((a, b) => b.task_count - a.task_count);
+                content = `
+                    <h2>All Groups</h2>
+                    <div class="table-wrapper" style="max-height: 500px; overflow-y: auto;">
+                        <table>
+                            <thead>
+                                <tr><th>Group</th><th>Computers</th><th>Tasks</th><th>Avg/PC</th></tr>
+                            </thead>
+                            <tbody>
+                                ${groups.map(g => `
+                                    <tr>
+                                        <td><strong>${g.name}</strong></td>
+                                        <td>${g.computer_count}</td>
+                                        <td>${g.task_count}</td>
+                                        <td>${(g.task_count / g.computer_count).toFixed(1)}</td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                `;
+            }
+            
+            if (content) {
+                document.getElementById('modalContent').innerHTML = content;
+                document.getElementById('modal').style.display = 'block';
+            }
+        }
+
+        function closeModal() {
+            document.getElementById('modal').style.display = 'none';
+        }
+
+        function applyFilters() {
+            const groupFilter = document.getElementById('groupFilter').value;
+            const taskFilter = document.getElementById('taskFilter').value;
+            const dateStart = document.getElementById('dateStart').value;
+            const dateEnd = document.getElementById('dateEnd').value;
+            const searchText = document.getElementById('searchBox').value.toLowerCase();
+
+            let filtered = dashboardData.full_dataset.filter(task => {
+                const matchGroup = groupFilter === 'all' || task.group === groupFilter;
+                const matchTask = taskFilter === 'all' || task.task === taskFilter;
+                const matchDate = (!dateStart || task.timestamp >= dateStart) && (!dateEnd || task.timestamp <= dateEnd + ' 23:59:59');
+                const matchSearch = !searchText || task.computer.toLowerCase().includes(searchText);
+                return matchGroup && matchTask && matchDate && matchSearch;
+            });
+
+            filteredData = rebuildDataStructure(filtered);
+            renderMetrics();
+            renderCharts();
+            renderHeatmap();
+            renderComputersTable();
+        }
+
+        function rebuildDataStructure(filtered) {
+            const computersMap = {};
+            filtered.forEach(task => {
+                if (!computersMap[task.computer]) {
+                    computersMap[task.computer] = {
+                        name: task.computer,
+                        group: task.group,
+                        tags: task.tags,
+                        task_count: 0,
+                        last_updated: task.timestamp,
+                        tasks: []
+                    };
+                }
+                computersMap[task.computer].task_count++;
+                computersMap[task.computer].tasks.push({
+                    task_name: task.task,
+                    status: task.status,
+                    timestamp: task.timestamp
+                });
+                if (task.timestamp > computersMap[task.computer].last_updated) {
+                    computersMap[task.computer].last_updated = task.timestamp;
+                }
+            });
+
+            const groupsMap = {};
+            filtered.forEach(task => {
+                if (!groupsMap[task.group]) {
+                    groupsMap[task.group] = {
+                        name: task.group,
+                        computer_count: new Set(),
+                        task_count: 0,
+                        computers: new Set()
+                    };
+                }
+                groupsMap[task.group].task_count++;
+                groupsMap[task.group].computer_count.add(task.computer);
+                groupsMap[task.group].computers.add(task.computer);
+            });
+
+            const groups = Object.values(groupsMap).map(g => ({
+                name: g.name,
+                computer_count: g.computer_count.size,
+                task_count: g.task_count,
+                computers: Array.from(g.computers)
+            }));
+
+            const dailyMap = {};
+            filtered.forEach(task => {
+                const date = task.timestamp.split(' ')[0];
+                if (!dailyMap[date]) {
+                    dailyMap[date] = { date, total: 0, executed: 0 };
+                }
+                dailyMap[date].total++;
+                if (task.status === 'Executed') {
+                    dailyMap[date].executed++;
+                }
+            });
+
+            const taskMap = {};
+            filtered.forEach(task => {
+                taskMap[task.task] = (taskMap[task.task] || 0) + 1;
+            });
+
+            const task_types = Object.entries(taskMap).map(([task, count]) => ({ task, count }));
+
+            const heatmapMap = {};
+            filtered.forEach(task => {
+                const date = new Date(task.timestamp);
+                const day = date.toLocaleDateString('en-US', { weekday: 'long' });
+                const hour = date.getHours();
+                
+                if (!heatmapMap[day]) {
+                    heatmapMap[day] = { day, hours: new Array(24).fill(0) };
+                }
+                heatmapMap[day].hours[hour]++;
+            });
+
+            const dayOrder = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+            const heatmap = dayOrder.map(day => heatmapMap[day] || { day, hours: new Array(24).fill(0) });
+
+            const computer_task_counts = {};
+            Object.values(computersMap).forEach(comp => {
+                computer_task_counts[comp.name] = comp.task_count;
+            });
+
+            return {
+                metrics: {
+                    total_tasks: filtered.length,
+                    unique_computers: Object.keys(computersMap).length,
+                    unique_groups: groups.length,
+                    success_rate: ((filtered.filter(t => t.status === 'Executed').length / filtered.length) * 100).toFixed(1),
+                    date_range_days: dashboardData.metrics.date_range_days,
+                    avg_tasks_per_day: (filtered.length / dashboardData.metrics.date_range_days).toFixed(1),
+                    date_range_start: dashboardData.metrics.date_range_start,
+                    date_range_end: dashboardData.metrics.date_range_end
+                },
+                computers: Object.values(computersMap),
+                groups: groups,
+                daily_trend: Object.values(dailyMap).sort((a, b) => a.date.localeCompare(b.date)),
+                task_types: task_types,
+                heatmap: heatmap,
+                computer_task_counts: computer_task_counts,
+                tag_counts: dashboardData.tag_counts,
+                status_counts: dashboardData.status_counts,
+                full_dataset: filtered
+            };
+        }
+
+        function resetFilters() {
+            document.getElementById('groupFilter').value = 'all';
+            document.getElementById('taskFilter').value = 'all';
+            document.getElementById('dateStart').value = dashboardData.metrics.date_range_start;
+            document.getElementById('dateEnd').value = dashboardData.metrics.date_range_end;
+            document.getElementById('searchBox').value = '';
+            
+            filteredData = JSON.parse(JSON.stringify(dashboardData));
+            renderMetrics();
+            renderCharts();
+            renderHeatmap();
+            renderComputersTable();
+        }
+
+        function exportToCSV() {
+            const csv = [
+                ['Computer Name', 'Group', 'Tags', 'Task Name', 'Status', 'Timestamp'],
+                ...filteredData.full_dataset.map(task => [
+                    task.computer, task.group, task.tags, task.task, task.status, task.timestamp
+                ])
+            ].map(row => row.map(cell => `"${cell}"`).join(',')).join('\n');
+
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `deepfreeze_export_${new Date().toISOString().split('T')[0]}.csv`;
+            a.click();
+        }
+
+        window.onclick = function(event) {
+            if (event.target === document.getElementById('modal')) {
+                closeModal();
+            }
+        }
+
+        loadData();
+    </script>
+</body>
+</html>
