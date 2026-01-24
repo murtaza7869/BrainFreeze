@@ -1,0 +1,1053 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DeepFreeze ThawSpace Analytics | Evertz</title>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --primary-bg: #0a0e1a;
+            --secondary-bg: #151929;
+            --card-bg: #1a1f35;
+            --accent-blue: #2dd4bf;
+            --accent-cyan: #22d3ee;
+            --accent-warning: #fbbf24;
+            --accent-danger: #ef4444;
+            --text-primary: #f0f4f8;
+            --text-secondary: #94a3b8;
+            --border-color: #2d3548;
+            --frozen-color: #06b6d4;
+            --thawed-color: #10b981;
+            --shadow-glow: 0 0 30px rgba(45, 212, 191, 0.1);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, var(--primary-bg) 0%, #0f1420 100%);
+            color: var(--text-primary);
+            min-height: 100vh;
+            padding: 2rem;
+            position: relative;
+            overflow-x: hidden;
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle at 30% 20%, rgba(45, 212, 191, 0.05) 0%, transparent 50%),
+                        radial-gradient(circle at 70% 80%, rgba(34, 211, 238, 0.05) 0%, transparent 50%);
+            animation: pulse 15s ease-in-out infinite;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: translate(0, 0) scale(1); }
+            50% { transform: translate(5%, 5%) scale(1.1); }
+        }
+
+        @keyframes slideInDown {
+            from {
+                opacity: 0;
+                transform: translateY(-30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes slideInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .container {
+            max-width: 1800px;
+            margin: 0 auto;
+            position: relative;
+            z-index: 1;
+        }
+
+        header {
+            margin-bottom: 3rem;
+            animation: slideInDown 0.8s ease-out;
+        }
+
+        .header-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 2rem;
+        }
+
+        h1 {
+            font-size: 3rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--accent-blue), var(--accent-cyan));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            letter-spacing: -0.02em;
+            margin-bottom: 0.5rem;
+        }
+
+        .subtitle {
+            font-family: 'JetBrains Mono', monospace;
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+        }
+
+        .refresh-time {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            padding: 0.5rem 1rem;
+            background: var(--card-bg);
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+            animation: slideInUp 0.8s ease-out 0.2s both;
+        }
+
+        .stat-card {
+            background: var(--card-bg);
+            padding: 1.8rem;
+            border-radius: 16px;
+            border: 1px solid var(--border-color);
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 3px;
+            background: linear-gradient(90deg, var(--accent-blue), var(--accent-cyan));
+            transform: scaleX(0);
+            transform-origin: left;
+            transition: transform 0.3s ease;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-4px);
+            box-shadow: var(--shadow-glow);
+            border-color: var(--accent-blue);
+        }
+
+        .stat-card:hover::before {
+            transform: scaleX(1);
+        }
+
+        .stat-label {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 0.8rem;
+            font-weight: 600;
+        }
+
+        .stat-value {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            line-height: 1;
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-change {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(12, 1fr);
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .chart-container {
+            background: var(--card-bg);
+            padding: 2rem;
+            border-radius: 16px;
+            border: 1px solid var(--border-color);
+            animation: fadeIn 1s ease-out;
+        }
+
+        .chart-container.full {
+            grid-column: span 12;
+        }
+
+        .chart-container.half {
+            grid-column: span 6;
+        }
+
+        .chart-container.third {
+            grid-column: span 4;
+        }
+
+        @media (max-width: 1200px) {
+            .chart-container.half,
+            .chart-container.third {
+                grid-column: span 12;
+            }
+        }
+
+        .chart-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .chart-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .chart-subtitle {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            margin-top: 0.25rem;
+        }
+
+        .badge {
+            padding: 0.4rem 0.8rem;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .badge.info {
+            background: rgba(45, 212, 191, 0.15);
+            color: var(--accent-blue);
+        }
+
+        .badge.warning {
+            background: rgba(251, 191, 36, 0.15);
+            color: var(--accent-warning);
+        }
+
+        .badge.danger {
+            background: rgba(239, 68, 68, 0.15);
+            color: var(--accent-danger);
+        }
+
+        .badge.success {
+            background: rgba(16, 185, 129, 0.15);
+            color: var(--thawed-color);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+        }
+
+        thead th {
+            background: var(--secondary-bg);
+            color: var(--text-secondary);
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 0.75rem;
+            letter-spacing: 0.05em;
+            padding: 1rem;
+            text-align: left;
+            border-bottom: 2px solid var(--border-color);
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        tbody tr {
+            transition: all 0.2s ease;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        tbody tr:hover {
+            background: rgba(45, 212, 191, 0.05);
+        }
+
+        tbody td {
+            padding: 1rem;
+            color: var(--text-primary);
+            font-size: 0.9rem;
+        }
+
+        .machine-name {
+            font-family: 'JetBrains Mono', monospace;
+            font-weight: 600;
+            color: var(--accent-cyan);
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: var(--secondary-bg);
+            border-radius: 4px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--accent-blue), var(--accent-cyan));
+            border-radius: 4px;
+            transition: width 0.5s ease;
+        }
+
+        .progress-fill.warning {
+            background: linear-gradient(90deg, var(--accent-warning), #f59e0b);
+        }
+
+        .progress-fill.danger {
+            background: linear-gradient(90deg, var(--accent-danger), #dc2626);
+        }
+
+        .tag {
+            display: inline-block;
+            padding: 0.3rem 0.6rem;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .tag.visible {
+            background: rgba(45, 212, 191, 0.2);
+            color: var(--accent-blue);
+        }
+
+        .tag.hidden {
+            background: rgba(148, 163, 184, 0.2);
+            color: var(--text-secondary);
+        }
+
+        .tag.autogrow {
+            background: rgba(16, 185, 129, 0.2);
+            color: var(--thawed-color);
+        }
+
+        .filter-bar {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+            flex-wrap: wrap;
+            animation: slideInUp 0.8s ease-out 0.4s both;
+        }
+
+        .filter-btn {
+            padding: 0.75rem 1.5rem;
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            color: var(--text-primary);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 500;
+            font-size: 0.9rem;
+        }
+
+        .filter-btn:hover,
+        .filter-btn.active {
+            background: var(--accent-blue);
+            border-color: var(--accent-blue);
+            color: var(--primary-bg);
+        }
+
+        .search-box {
+            flex: 1;
+            min-width: 250px;
+            padding: 0.75rem 1rem;
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            color: var(--text-primary);
+            font-size: 0.9rem;
+            transition: all 0.3s ease;
+        }
+
+        .search-box:focus {
+            outline: none;
+            border-color: var(--accent-blue);
+            box-shadow: 0 0 0 3px rgba(45, 212, 191, 0.1);
+        }
+
+        .alert-box {
+            background: var(--card-bg);
+            border-left: 4px solid var(--accent-warning);
+            padding: 1.5rem;
+            border-radius: 8px;
+            margin-bottom: 2rem;
+            animation: slideInUp 0.8s ease-out 0.6s both;
+        }
+
+        .alert-title {
+            font-weight: 600;
+            color: var(--accent-warning);
+            margin-bottom: 0.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .alert-content {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        canvas {
+            max-height: 400px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="header-content">
+                <div>
+                    <h1>ThawSpace Analytics</h1>
+                    <div class="subtitle">DeepFreeze Cloud · Evertz Manufacturing</div>
+                </div>
+                <div class="refresh-time">
+                    Last Updated: <span id="lastUpdate"></span>
+                </div>
+            </div>
+        </header>
+
+        <!-- Key Metrics -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-label">Total Machines</div>
+                <div class="stat-value" id="totalMachines">0</div>
+                <div class="stat-change">DeepFreeze endpoints</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">With ThawSpace</div>
+                <div class="stat-value" id="withThawspace">0</div>
+                <div class="stat-change"><span id="thawspacePercent">0</span>% of total</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Total ThawSpace</div>
+                <div class="stat-value" id="totalSpace">0 GB</div>
+                <div class="stat-change">Allocated capacity</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Auto-Grow Enabled</div>
+                <div class="stat-value" id="autoGrowCount">0</div>
+                <div class="stat-change"><span id="autoGrowPercent">0</span>% of ThawSpaces</div>
+            </div>
+        </div>
+
+        <!-- Capacity Alert -->
+        <div class="alert-box" id="capacityAlert" style="display: none;">
+            <div class="alert-title">
+                ⚠️ Capacity Warning
+            </div>
+            <div class="alert-content" id="alertContent"></div>
+        </div>
+
+        <!-- Filters -->
+        <div class="filter-bar">
+            <button class="filter-btn active" data-filter="all">All Machines</button>
+            <button class="filter-btn" data-filter="thawspace">With ThawSpace</button>
+            <button class="filter-btn" data-filter="autogrow">Auto-Grow</button>
+            <button class="filter-btn" data-filter="visible">Visible</button>
+            <button class="filter-btn" data-filter="hidden">Hidden</button>
+            <input type="text" class="search-box" placeholder="Search by machine name or IP..." id="searchBox">
+        </div>
+
+        <!-- Charts Grid -->
+        <div class="dashboard-grid">
+            <!-- ThawSpace Distribution -->
+            <div class="chart-container half">
+                <div class="chart-header">
+                    <div>
+                        <div class="chart-title">ThawSpace Distribution</div>
+                        <div class="chart-subtitle">By size allocation</div>
+                    </div>
+                    <span class="badge info">Size Analysis</span>
+                </div>
+                <canvas id="sizeDistChart"></canvas>
+            </div>
+
+            <!-- Visibility & Auto-Grow -->
+            <div class="chart-container half">
+                <div class="chart-header">
+                    <div>
+                        <div class="chart-title">Configuration Status</div>
+                        <div class="chart-subtitle">Visibility & Auto-Grow settings</div>
+                    </div>
+                    <span class="badge success">Config Stats</span>
+                </div>
+                <canvas id="configChart"></canvas>
+            </div>
+
+            <!-- Host Drive Distribution -->
+            <div class="chart-container third">
+                <div class="chart-header">
+                    <div>
+                        <div class="chart-title">Host Drive Usage</div>
+                        <div class="chart-subtitle">Physical partition distribution</div>
+                    </div>
+                </div>
+                <canvas id="hostDriveChart"></canvas>
+            </div>
+
+            <!-- Utilization Trend -->
+            <div class="chart-container third">
+                <div class="chart-header">
+                    <div>
+                        <div class="chart-title">Utilization Analysis</div>
+                        <div class="chart-subtitle">Space usage patterns</div>
+                    </div>
+                </div>
+                <canvas id="utilizationChart"></canvas>
+            </div>
+
+            <!-- Size Categories -->
+            <div class="chart-container third">
+                <div class="chart-header">
+                    <div>
+                        <div class="chart-title">Size Categories</div>
+                        <div class="chart-subtitle">ThawSpace size ranges</div>
+                    </div>
+                </div>
+                <canvas id="sizeCategoryChart"></canvas>
+            </div>
+
+            <!-- Detailed Table -->
+            <div class="chart-container full">
+                <div class="chart-header">
+                    <div>
+                        <div class="chart-title">ThawSpace Details</div>
+                        <div class="chart-subtitle">Complete machine inventory with ThawSpace configuration</div>
+                    </div>
+                    <span class="badge info"><span id="tableCount">0</span> Machines</span>
+                </div>
+                <div style="overflow-x: auto;">
+                    <table id="thawspaceTable">
+                        <thead>
+                            <tr>
+                                <th>Machine Name</th>
+                                <th>IP Address</th>
+                                <th>ThawSpace Size</th>
+                                <th>Used Space</th>
+                                <th>Utilization</th>
+                                <th>Host Drive</th>
+                                <th>Visibility</th>
+                                <th>Auto-Grow</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tableBody">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Sample data - In production, this would come from DeepFreeze Cloud API
+        const machinesData = [
+            // Machines with ThawSpace
+            { name: "0123TE06", ip: "10.50.2.13", thawspaceSize: 2048, usedSpace: 1456, hostDrive: "C:", visibility: "visible", autoGrow: true, status: "Thawed" },
+            { name: "0123TE08", ip: "192.168.25.60", thawspaceSize: 4096, usedSpace: 3277, hostDrive: "C:", visibility: "visible", autoGrow: true, status: "Thawed" },
+            { name: "0123TE09", ip: "10.42.5.41", thawspaceSize: 1024, usedSpace: 768, hostDrive: "C:", visibility: "hidden", autoGrow: false, status: "Frozen" },
+            { name: "0123TE12", ip: "10.42.6.15", thawspaceSize: 2048, usedSpace: 1024, hostDrive: "D:", visibility: "visible", autoGrow: true, status: "Frozen" },
+            { name: "0123TE20", ip: "10.41.7.25", thawspaceSize: 3072, usedSpace: 2150, hostDrive: "C:", visibility: "visible", autoGrow: true, status: "Thawed" },
+            { name: "0123TEST10", ip: "192.168.8.99", thawspaceSize: 5120, usedSpace: 4608, hostDrive: "C:", visibility: "visible", autoGrow: true, status: "Thawed" },
+            { name: "0124RD07", ip: "10.41.12.108", thawspaceSize: 1024, usedSpace: 512, hostDrive: "C:", visibility: "hidden", autoGrow: false, status: "Frozen" },
+            { name: "0124RD08", ip: "10.44.4.107", thawspaceSize: 2048, usedSpace: 1638, hostDrive: "D:", visibility: "visible", autoGrow: true, status: "Thawed" },
+            { name: "0124RD11", ip: "10.42.11.10", thawspaceSize: 2048, usedSpace: 819, hostDrive: "C:", visibility: "visible", autoGrow: false, status: "Frozen" },
+            { name: "0124RD12", ip: "10.41.12.118", thawspaceSize: 3072, usedSpace: 2458, hostDrive: "C:", visibility: "visible", autoGrow: true, status: "Frozen" },
+            { name: "0124RD14", ip: "10.44.49.76", thawspaceSize: 4096, usedSpace: 2867, hostDrive: "D:", visibility: "visible", autoGrow: true, status: "Thawed" },
+            { name: "012588DT02", ip: "10.42.3.29", thawspaceSize: 2048, usedSpace: 1228, hostDrive: "C:", visibility: "visible", autoGrow: false, status: "Thawed" },
+            { name: "0125RD02", ip: "10.41.12.94", thawspaceSize: 1024, usedSpace: 870, hostDrive: "C:", visibility: "hidden", autoGrow: true, status: "Thawed" },
+            { name: "0125RD03", ip: "10.41.10.3", thawspaceSize: 3072, usedSpace: 1843, hostDrive: "C:", visibility: "visible", autoGrow: true, status: "Thawed" },
+            { name: "0125RD04", ip: "10.44.4.17", thawspaceSize: 2048, usedSpace: 1638, hostDrive: "C:", visibility: "visible", autoGrow: true, status: "Thawed" },
+            { name: "012688DT02", ip: "10.42.5.63", thawspaceSize: 5120, usedSpace: 4300, hostDrive: "D:", visibility: "visible", autoGrow: true, status: "Thawed" },
+            { name: "0179RDIBC19", ip: "10.42.9.48", thawspaceSize: 2048, usedSpace: 1024, hostDrive: "C:", visibility: "visible", autoGrow: false, status: "Thawed" },
+            { name: "0214RD03", ip: "10.41.12.77", thawspaceSize: 1024, usedSpace: 307, hostDrive: "C:", visibility: "hidden", autoGrow: false, status: "Frozen" },
+            { name: "0215RD08", ip: "10.43.10.6", thawspaceSize: 2048, usedSpace: 1126, hostDrive: "C:", visibility: "visible", autoGrow: true, status: "Frozen" },
+            { name: "0217RDNAB072", ip: "10.42.4.10", thawspaceSize: 3072, usedSpace: 1843, hostDrive: "D:", visibility: "visible", autoGrow: true, status: "Thawed" },
+            { name: "0217RDNAB25", ip: "10.41.12.67", thawspaceSize: 2048, usedSpace: 1433, hostDrive: "C:", visibility: "visible", autoGrow: true, status: "Thawed" },
+            { name: "0217RDNAB35", ip: "10.50.2.37", thawspaceSize: 2048, usedSpace: 1024, hostDrive: "C:", visibility: "visible", autoGrow: false, status: "Thawed" },
+            { name: "0217RDNAB52", ip: "10.41.12.52", thawspaceSize: 4096, usedSpace: 2458, hostDrive: "C:", visibility: "visible", autoGrow: true, status: "Thawed" },
+            { name: "0217RDNAB57", ip: "10.43.10.55", thawspaceSize: 2048, usedSpace: 1638, hostDrive: "C:", visibility: "visible", autoGrow: true, status: "Thawed" },
+            { name: "0217RDNAB62", ip: "10.50.2.20", thawspaceSize: 3072, usedSpace: 2253, hostDrive: "C:", visibility: "visible", autoGrow: false, status: "Frozen" },
+            { name: "0219RD01", ip: "10.41.7.19", thawspaceSize: 5120, usedSpace: 3994, hostDrive: "C:", visibility: "visible", autoGrow: true, status: "Thawed" },
+            { name: "0221RDNOTE10", ip: "10.41.12.12", thawspaceSize: 1024, usedSpace: 614, hostDrive: "C:", visibility: "hidden", autoGrow: false, status: "Thawed" },
+            { name: "0224RD02", ip: "10.41.12.115", thawspaceSize: 2048, usedSpace: 1536, hostDrive: "C:", visibility: "visible", autoGrow: false, status: "Frozen" },
+            { name: "0224RD04", ip: "10.41.12.63", thawspaceSize: 4096, usedSpace: 3482, hostDrive: "D:", visibility: "visible", autoGrow: true, status: "Frozen" },
+            { name: "0224RD05", ip: "10.41.12.132", thawspaceSize: 2048, usedSpace: 1024, hostDrive: "C:", visibility: "visible", autoGrow: false, status: "Thawed" },
+            { name: "0224RD07", ip: "10.42.5.21", thawspaceSize: 3072, usedSpace: 2150, hostDrive: "C:", visibility: "visible", autoGrow: true, status: "Thawed" },
+            { name: "0224RD10", ip: "10.41.12.140", thawspaceSize: 1024, usedSpace: 768, hostDrive: "C:", visibility: "hidden", autoGrow: false, status: "Frozen" },
+            { name: "0224RD11", ip: "10.42.5.34", thawspaceSize: 2048, usedSpace: 1331, hostDrive: "C:", visibility: "visible", autoGrow: true, status: "Thawed" },
+            // Machines without ThawSpace
+            { name: "00217RDNAB38", ip: "10.43.2.4", thawspaceSize: 0, usedSpace: 0, hostDrive: "N/A", visibility: "N/A", autoGrow: false, status: "Frozen" },
+            { name: "00318RDNAB56", ip: "169.254.149.94", thawspaceSize: 0, usedSpace: 0, hostDrive: "N/A", visibility: "N/A", autoGrow: false, status: "Frozen" },
+            { name: "0123TE13", ip: "10.41.12.32", thawspaceSize: 0, usedSpace: 0, hostDrive: "N/A", visibility: "N/A", autoGrow: false, status: "Thawed" },
+            { name: "0124RD03", ip: "10.41.5.25", thawspaceSize: 0, usedSpace: 0, hostDrive: "N/A", visibility: "N/A", autoGrow: false, status: "Thawed" },
+            { name: "0124RD10", ip: "10.43.10.72", thawspaceSize: 0, usedSpace: 0, hostDrive: "N/A", visibility: "N/A", autoGrow: false, status: "Frozen" },
+            { name: "0126RD02", ip: "10.41.24.15", thawspaceSize: 0, usedSpace: 0, hostDrive: "N/A", visibility: "N/A", autoGrow: false, status: "Thawed" },
+            { name: "0214RD005", ip: "10.41.11.5", thawspaceSize: 0, usedSpace: 0, hostDrive: "N/A", visibility: "N/A", autoGrow: false, status: "Thawed" },
+            { name: "0215RDNOTE16", ip: "10.41.6.13", thawspaceSize: 0, usedSpace: 0, hostDrive: "N/A", visibility: "N/A", autoGrow: false, status: "Thawed" },
+            { name: "0217RDNOTE04", ip: "10.44.4.79", thawspaceSize: 0, usedSpace: 0, hostDrive: "N/A", visibility: "N/A", autoGrow: false, status: "Thawed" },
+            { name: "0222RDNOTE35", ip: "10.44.4.209", thawspaceSize: 0, usedSpace: 0, hostDrive: "N/A", visibility: "N/A", autoGrow: false, status: "Thawed" },
+            { name: "0223RDNOTE06", ip: "10.44.48.52", thawspaceSize: 0, usedSpace: 0, hostDrive: "N/A", visibility: "N/A", autoGrow: false, status: "Thawed" },
+            { name: "0223RDNOTE07", ip: "10.41.4.23", thawspaceSize: 0, usedSpace: 0, hostDrive: "N/A", visibility: "N/A", autoGrow: false, status: "Thawed" },
+            { name: "0224RD01", ip: "10.43.10.88", thawspaceSize: 0, usedSpace: 0, hostDrive: "N/A", visibility: "N/A", autoGrow: false, status: "Frozen" }
+        ];
+
+        let currentFilter = 'all';
+        let currentSearch = '';
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            updateLastRefresh();
+            calculateStats();
+            createCharts();
+            renderTable();
+            setupFilters();
+            checkCapacityAlerts();
+        });
+
+        function updateLastRefresh() {
+            const now = new Date();
+            document.getElementById('lastUpdate').textContent = now.toLocaleString('en-US', {
+                month: 'short',
+                day: 'numeric',
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        }
+
+        function calculateStats() {
+            const totalMachines = machinesData.length;
+            const withThawspace = machinesData.filter(m => m.thawspaceSize > 0).length;
+            const autoGrowCount = machinesData.filter(m => m.thawspaceSize > 0 && m.autoGrow).length;
+            const totalSpace = machinesData.reduce((sum, m) => sum + m.thawspaceSize, 0) / 1024; // Convert to GB
+
+            document.getElementById('totalMachines').textContent = totalMachines;
+            document.getElementById('withThawspace').textContent = withThawspace;
+            document.getElementById('thawspacePercent').textContent = ((withThawspace / totalMachines) * 100).toFixed(1);
+            document.getElementById('totalSpace').textContent = totalSpace.toFixed(1) + ' GB';
+            document.getElementById('autoGrowCount').textContent = autoGrowCount;
+            document.getElementById('autoGrowPercent').textContent = withThawspace > 0 ? 
+                ((autoGrowCount / withThawspace) * 100).toFixed(1) : '0';
+        }
+
+        function createCharts() {
+            createSizeDistributionChart();
+            createConfigChart();
+            createHostDriveChart();
+            createUtilizationChart();
+            createSizeCategoryChart();
+        }
+
+        function createSizeDistributionChart() {
+            const ctx = document.getElementById('sizeDistChart').getContext('2d');
+            const thawspaceData = machinesData.filter(m => m.thawspaceSize > 0);
+            
+            // Group by size
+            const sizeGroups = {
+                '1 GB': 0,
+                '2 GB': 0,
+                '3 GB': 0,
+                '4 GB': 0,
+                '5 GB+': 0
+            };
+
+            thawspaceData.forEach(m => {
+                const sizeGB = m.thawspaceSize / 1024;
+                if (sizeGB <= 1) sizeGroups['1 GB']++;
+                else if (sizeGB <= 2) sizeGroups['2 GB']++;
+                else if (sizeGB <= 3) sizeGroups['3 GB']++;
+                else if (sizeGB <= 4) sizeGroups['4 GB']++;
+                else sizeGroups['5 GB+']++;
+            });
+
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: Object.keys(sizeGroups),
+                    datasets: [{
+                        label: 'Number of Machines',
+                        data: Object.values(sizeGroups),
+                        backgroundColor: 'rgba(45, 212, 191, 0.8)',
+                        borderColor: 'rgba(45, 212, 191, 1)',
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: { color: '#94a3b8', stepSize: 1 },
+                            grid: { color: 'rgba(45, 212, 191, 0.1)' }
+                        },
+                        x: {
+                            ticks: { color: '#94a3b8' },
+                            grid: { display: false }
+                        }
+                    }
+                }
+            });
+        }
+
+        function createConfigChart() {
+            const ctx = document.getElementById('configChart').getContext('2d');
+            const thawspaceData = machinesData.filter(m => m.thawspaceSize > 0);
+            
+            const visible = thawspaceData.filter(m => m.visibility === 'visible').length;
+            const hidden = thawspaceData.filter(m => m.visibility === 'hidden').length;
+            const autoGrow = thawspaceData.filter(m => m.autoGrow).length;
+            const manual = thawspaceData.filter(m => !m.autoGrow).length;
+
+            new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Visible', 'Hidden', 'Auto-Grow', 'Manual'],
+                    datasets: [{
+                        data: [visible, hidden, autoGrow, manual],
+                        backgroundColor: [
+                            'rgba(45, 212, 191, 0.8)',
+                            'rgba(148, 163, 184, 0.8)',
+                            'rgba(16, 185, 129, 0.8)',
+                            'rgba(251, 191, 36, 0.8)'
+                        ],
+                        borderWidth: 2,
+                        borderColor: '#1a1f35'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: { color: '#94a3b8', padding: 15 }
+                        }
+                    }
+                }
+            });
+        }
+
+        function createHostDriveChart() {
+            const ctx = document.getElementById('hostDriveChart').getContext('2d');
+            const thawspaceData = machinesData.filter(m => m.thawspaceSize > 0);
+            
+            const driveCount = {};
+            thawspaceData.forEach(m => {
+                driveCount[m.hostDrive] = (driveCount[m.hostDrive] || 0) + 1;
+            });
+
+            new Chart(ctx, {
+                type: 'pie',
+                data: {
+                    labels: Object.keys(driveCount),
+                    datasets: [{
+                        data: Object.values(driveCount),
+                        backgroundColor: [
+                            'rgba(45, 212, 191, 0.8)',
+                            'rgba(34, 211, 238, 0.8)',
+                            'rgba(16, 185, 129, 0.8)'
+                        ],
+                        borderWidth: 2,
+                        borderColor: '#1a1f35'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: { color: '#94a3b8', padding: 15 }
+                        }
+                    }
+                }
+            });
+        }
+
+        function createUtilizationChart() {
+            const ctx = document.getElementById('utilizationChart').getContext('2d');
+            const thawspaceData = machinesData.filter(m => m.thawspaceSize > 0);
+            
+            const utilGroups = {
+                '0-25%': 0,
+                '25-50%': 0,
+                '50-75%': 0,
+                '75-90%': 0,
+                '90-100%': 0
+            };
+
+            thawspaceData.forEach(m => {
+                const util = (m.usedSpace / m.thawspaceSize) * 100;
+                if (util <= 25) utilGroups['0-25%']++;
+                else if (util <= 50) utilGroups['25-50%']++;
+                else if (util <= 75) utilGroups['50-75%']++;
+                else if (util <= 90) utilGroups['75-90%']++;
+                else utilGroups['90-100%']++;
+            });
+
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: Object.keys(utilGroups),
+                    datasets: [{
+                        label: 'Machines',
+                        data: Object.values(utilGroups),
+                        backgroundColor: [
+                            'rgba(16, 185, 129, 0.8)',
+                            'rgba(45, 212, 191, 0.8)',
+                            'rgba(251, 191, 36, 0.8)',
+                            'rgba(249, 115, 22, 0.8)',
+                            'rgba(239, 68, 68, 0.8)'
+                        ],
+                        borderWidth: 2,
+                        borderColor: '#1a1f35'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: { color: '#94a3b8', stepSize: 1 },
+                            grid: { color: 'rgba(45, 212, 191, 0.1)' }
+                        },
+                        x: {
+                            ticks: { color: '#94a3b8', font: { size: 10 } },
+                            grid: { display: false }
+                        }
+                    }
+                }
+            });
+        }
+
+        function createSizeCategoryChart() {
+            const ctx = document.getElementById('sizeCategoryChart').getContext('2d');
+            const thawspaceData = machinesData.filter(m => m.thawspaceSize > 0);
+            
+            const categories = {
+                'Small (≤1GB)': 0,
+                'Medium (1-3GB)': 0,
+                'Large (3-5GB)': 0,
+                'X-Large (>5GB)': 0
+            };
+
+            thawspaceData.forEach(m => {
+                const sizeGB = m.thawspaceSize / 1024;
+                if (sizeGB <= 1) categories['Small (≤1GB)']++;
+                else if (sizeGB <= 3) categories['Medium (1-3GB)']++;
+                else if (sizeGB <= 5) categories['Large (3-5GB)']++;
+                else categories['X-Large (>5GB)']++;
+            });
+
+            new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: Object.keys(categories),
+                    datasets: [{
+                        data: Object.values(categories),
+                        backgroundColor: [
+                            'rgba(34, 211, 238, 0.8)',
+                            'rgba(45, 212, 191, 0.8)',
+                            'rgba(16, 185, 129, 0.8)',
+                            'rgba(251, 191, 36, 0.8)'
+                        ],
+                        borderWidth: 2,
+                        borderColor: '#1a1f35'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: { color: '#94a3b8', padding: 10, font: { size: 10 } }
+                        }
+                    }
+                }
+            });
+        }
+
+        function renderTable() {
+            const tbody = document.getElementById('tableBody');
+            const filteredData = getFilteredData();
+            
+            tbody.innerHTML = filteredData.map(machine => {
+                const utilization = machine.thawspaceSize > 0 ? 
+                    (machine.usedSpace / machine.thawspaceSize * 100) : 0;
+                const utilizationClass = utilization > 90 ? 'danger' : utilization > 75 ? 'warning' : '';
+                
+                return `
+                    <tr>
+                        <td><span class="machine-name">${machine.name}</span></td>
+                        <td>${machine.ip}</td>
+                        <td>${machine.thawspaceSize > 0 ? (machine.thawspaceSize / 1024).toFixed(1) + ' GB' : 'None'}</td>
+                        <td>${machine.thawspaceSize > 0 ? (machine.usedSpace / 1024).toFixed(2) + ' GB' : 'N/A'}</td>
+                        <td>
+                            ${machine.thawspaceSize > 0 ? `
+                                <div class="progress-bar">
+                                    <div class="progress-fill ${utilizationClass}" style="width: ${utilization}%"></div>
+                                </div>
+                                <span style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 4px; display: inline-block;">
+                                    ${utilization.toFixed(1)}%
+                                </span>
+                            ` : 'N/A'}
+                        </td>
+                        <td>${machine.hostDrive}</td>
+                        <td>
+                            ${machine.thawspaceSize > 0 ? 
+                                `<span class="tag ${machine.visibility}">${machine.visibility}</span>` : 
+                                'N/A'}
+                        </td>
+                        <td>
+                            ${machine.thawspaceSize > 0 ? 
+                                (machine.autoGrow ? '<span class="tag autogrow">Enabled</span>' : '<span class="tag">Disabled</span>') : 
+                                'N/A'}
+                        </td>
+                        <td>
+                            <span class="badge ${machine.status === 'Frozen' ? 'info' : 'success'}">
+                                ${machine.status}
+                            </span>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+
+            document.getElementById('tableCount').textContent = filteredData.length;
+        }
+
+        function getFilteredData() {
+            let filtered = machinesData;
+
+            // Apply filter
+            if (currentFilter !== 'all') {
+                filtered = filtered.filter(m => {
+                    switch(currentFilter) {
+                        case 'thawspace':
+                            return m.thawspaceSize > 0;
+                        case 'autogrow':
+                            return m.thawspaceSize > 0 && m.autoGrow;
+                        case 'visible':
+                            return m.thawspaceSize > 0 && m.visibility === 'visible';
+                        case 'hidden':
+                            return m.thawspaceSize > 0 && m.visibility === 'hidden';
+                        default:
+                            return true;
+                    }
+                });
+            }
+
+            // Apply search
+            if (currentSearch) {
+                const searchLower = currentSearch.toLowerCase();
+                filtered = filtered.filter(m => 
+                    m.name.toLowerCase().includes(searchLower) ||
+                    m.ip.toLowerCase().includes(searchLower)
+                );
+            }
+
+            return filtered;
+        }
+
+        function setupFilters() {
+            // Filter buttons
+            document.querySelectorAll('.filter-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    currentFilter = btn.dataset.filter;
+                    renderTable();
+                });
+            });
+
+            // Search box
+            document.getElementById('searchBox').addEventListener('input', (e) => {
+                currentSearch = e.target.value;
+                renderTable();
+            });
+        }
+
+        function checkCapacityAlerts() {
+            const highUtilization = machinesData.filter(m => 
+                m.thawspaceSize > 0 && (m.usedSpace / m.thawspaceSize) > 0.9
+            );
+
+            if (highUtilization.length > 0) {
+                const alertBox = document.getElementById('capacityAlert');
+                const alertContent = document.getElementById('alertContent');
+                
+                alertContent.innerHTML = `
+                    ${highUtilization.length} machine(s) have ThawSpace utilization above 90%: 
+                    <strong>${highUtilization.map(m => m.name).join(', ')}</strong>. 
+                    Consider enabling Auto-Grow or increasing ThawSpace allocation.
+                `;
+                
+                alertBox.style.display = 'block';
+            }
+        }
+    </script>
+</body>
+</html>
