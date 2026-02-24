@@ -1,0 +1,889 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DeepFreeze Cloud • Custom Scripts Analytics</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=Space+Grotesk:wght@500;600&amp;display=swap');
+        
+        :root {
+            --primary: 234 179 8;
+        }
+        
+        body {
+            font-family: 'Inter', system_ui, sans-serif;
+        }
+        
+        .logo-font {
+            font-family: 'Space Grotesk', sans-serif;
+        }
+
+        .tab-active {
+            border-bottom: 3px solid rgb(234 179 8);
+            color: rgb(234 179 8);
+            font-weight: 600;
+        }
+
+        .glass {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+        }
+
+        .card-hover {
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        .card-hover:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+        }
+
+        table {
+            border-collapse: separate;
+            border-spacing: 0;
+        }
+        
+        th, td {
+            transition: background-color 0.1s;
+        }
+        
+        .modal {
+            animation: modalPop 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+        
+        @keyframes modalPop {
+            0% { transform: scale(0.8); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+    </style>
+</head>
+<body class="bg-zinc-100 text-zinc-800">
+    <div class="flex h-screen overflow-hidden">
+        <!-- SIDEBAR -->
+        <div class="w-72 bg-white border-r border-zinc-200 flex flex-col">
+            <div class="px-8 py-7 border-b border-zinc-200 flex items-center gap-3">
+                <div class="w-9 h-9 bg-yellow-400 rounded-2xl flex items-center justify-center text-zinc-900 font-bold text-2xl logo-font">DF</div>
+                <div>
+                    <span class="logo-font text-3xl font-semibold tracking-tighter text-zinc-900">DeepFreeze</span>
+                    <span class="text-xs text-zinc-400 block -mt-1">CLOUD</span>
+                </div>
+            </div>
+            
+            <div class="px-4 py-6 flex-1 overflow-y-auto">
+                <nav class="space-y-1">
+                    <a href="#" onclick="showTab('overview')" class="nav-item flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-medium text-zinc-500 hover:bg-zinc-100 transition-colors active">
+                        <i class="fa-solid fa-gauge-high w-5"></i>
+                        <span>Overview</span>
+                    </a>
+                    <a href="#" onclick="showTab('scripts')" class="nav-item flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-medium text-zinc-500 hover:bg-zinc-100 transition-colors">
+                        <i class="fa-solid fa-file-code w-5"></i>
+                        <span>Scripts</span>
+                    </a>
+                    <a href="#" onclick="showTab('endpoints')" class="nav-item flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-medium text-zinc-500 hover:bg-zinc-100 transition-colors">
+                        <i class="fa-solid fa-desktop w-5"></i>
+                        <span>Endpoints</span>
+                    </a>
+                    <a href="#" onclick="showTab('logs')" class="nav-item flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-medium text-zinc-500 hover:bg-zinc-100 transition-colors">
+                        <i class="fa-solid fa-list-check w-5"></i>
+                        <span>Execution Logs</span>
+                    </a>
+                    <a href="#" onclick="showTab('outputs')" class="nav-item flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-medium text-zinc-500 hover:bg-zinc-100 transition-colors">
+                        <i class="fa-solid fa-terminal w-5"></i>
+                        <span>Script Outputs</span>
+                    </a>
+                </nav>
+
+                <div class="mt-10 px-4">
+                    <div class="text-xs font-semibold tracking-widest text-zinc-400 mb-3">QUICK FILTERS</div>
+                    <div class="space-y-2">
+                        <div onclick="filterByStatus(this)" class="flex items-center justify-between bg-zinc-50 hover:bg-white border border-transparent hover:border-yellow-300 rounded-2xl px-4 py-3 cursor-pointer transition-all">
+                            <div class="flex items-center gap-2">
+                                <div class="w-2 h-2 bg-emerald-500 rounded-full"></div>
+                                <span class="text-sm">Success only</span>
+                            </div>
+                            <span class="text-xs bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full">1,289</span>
+                        </div>
+                        <div onclick="filterByStatus(this)" class="flex items-center justify-between bg-zinc-50 hover:bg-white border border-transparent hover:border-amber-300 rounded-2xl px-4 py-3 cursor-pointer transition-all">
+                            <div class="flex items-center gap-2">
+                                <div class="w-2 h-2 bg-amber-500 rounded-full"></div>
+                                <span class="text-sm">Last 7 days</span>
+                            </div>
+                            <span class="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full">342</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="border-t border-zinc-200 p-4">
+                <div class="flex items-center gap-3 px-4 py-3 bg-zinc-50 rounded-3xl">
+                    <img src="https://picsum.photos/id/64/32/32" alt="Admin" class="w-8 h-8 rounded-2xl">
+                    <div class="flex-1">
+                        <div class="text-sm font-medium">Murtaza K.</div>
+                        <div class="text-xs text-zinc-400">faronics.com</div>
+                    </div>
+                    <button onclick="alert('Logged out (demo)')" class="text-zinc-400 hover:text-zinc-600">
+                        <i class="fa-solid fa-arrow-right-from-bracket"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- MAIN CONTENT -->
+        <div class="flex-1 flex flex-col">
+            <!-- TOP BAR -->
+            <header class="h-16 bg-white border-b border-zinc-200 px-8 flex items-center justify-between">
+                <div class="flex items-center gap-4">
+                    <div class="flex items-center bg-zinc-100 rounded-3xl px-5 h-10 text-sm">
+                        <i class="fa-solid fa-magnifying-glass text-zinc-400 mr-3"></i>
+                        <input id="global-search" 
+                               onkeyup="if(event.key==='Enter') searchEverything()"
+                               type="text" 
+                               placeholder="Search scripts, computers, or outputs..." 
+                               class="bg-transparent outline-none w-96 text-sm placeholder-zinc-400">
+                    </div>
+                </div>
+
+                <div class="flex items-center gap-6">
+                    <div onclick="refreshDashboard()" class="flex items-center gap-2 text-sm font-medium cursor-pointer hover:text-yellow-600 transition-colors">
+                        <i class="fa-solid fa-rotate"></i>
+                        <span>Refresh</span>
+                    </div>
+                    
+                    <div class="h-7 w-px bg-zinc-200"></div>
+                    
+                    <button onclick="exportData()" 
+                            class="flex items-center gap-2 px-6 h-10 bg-white border border-zinc-300 hover:border-yellow-400 rounded-3xl text-sm font-medium transition-all">
+                        <i class="fa-solid fa-download"></i>
+                        Export CSV
+                    </button>
+                    
+                    <button onclick="openNewScriptModal()" 
+                            class="flex items-center gap-2 px-6 h-10 bg-yellow-400 hover:bg-yellow-500 text-zinc-900 font-semibold rounded-3xl text-sm transition-all">
+                        <i class="fa-solid fa-plus"></i>
+                        New Script
+                    </button>
+
+                    <div class="flex items-center gap-2 bg-zinc-100 rounded-3xl pl-2 pr-5 py-1 cursor-pointer">
+                        <div class="bg-white w-7 h-7 rounded-2xl flex items-center justify-center text-xs font-mono text-emerald-600">24</div>
+                        <div>
+                            <div class="text-xs leading-none">Feb 2026</div>
+                            <div class="text-[10px] text-zinc-400">Today</div>
+                        </div>
+                    </div>
+                </div>
+            </header>
+
+            <!-- TABS -->
+            <div class="bg-white border-b border-zinc-100">
+                <div class="px-8 flex items-center h-14 text-sm">
+                    <button onclick="showTab('overview')" id="tab-overview" 
+                            class="tab-button tab-active px-6 h-full">Overview</button>
+                    <button onclick="showTab('scripts')" id="tab-scripts" 
+                            class="tab-button px-6 h-full">Scripts</button>
+                    <button onclick="showTab('endpoints')" id="tab-endpoints" 
+                            class="tab-button px-6 h-full">Endpoints</button>
+                    <button onclick="showTab('logs')" id="tab-logs" 
+                            class="tab-button px-6 h-full">Execution Logs</button>
+                    <button onclick="showTab('outputs')" id="tab-outputs" 
+                            class="tab-button px-6 h-full">Script Outputs</button>
+                </div>
+            </div>
+
+            <!-- TAB CONTENTS -->
+            <div class="flex-1 overflow-auto">
+                
+                <!-- OVERVIEW TAB -->
+                <div id="content-overview" class="tab-content p-8">
+                    <div class="grid grid-cols-4 gap-6">
+                        <!-- KPI Cards -->
+                        <div class="bg-white rounded-3xl p-6 card-hover">
+                            <div class="flex justify-between">
+                                <div>
+                                    <div class="text-xs tracking-widest font-medium text-zinc-400">TOTAL SCRIPTS</div>
+                                    <div class="text-5xl font-semibold mt-2 text-zinc-900">56</div>
+                                </div>
+                                <div class="w-12 h-12 bg-yellow-100 rounded-2xl flex items-center justify-center text-3xl">📜</div>
+                            </div>
+                            <div class="mt-8 text-emerald-600 text-sm flex items-center gap-1">
+                                <i class="fa-solid fa-arrow-trend-up"></i>
+                                <span class="font-medium">+4 this month</span>
+                            </div>
+                        </div>
+                        
+                        <div class="bg-white rounded-3xl p-6 card-hover">
+                            <div class="flex justify-between">
+                                <div>
+                                    <div class="text-xs tracking-widest font-medium text-zinc-400">TOTAL EXECUTIONS</div>
+                                    <div class="text-5xl font-semibold mt-2 text-zinc-900">1,342</div>
+                                </div>
+                                <div class="w-12 h-12 bg-blue-100 rounded-2xl flex items-center justify-center text-3xl">⚡</div>
+                            </div>
+                            <div class="mt-8 text-emerald-600 text-sm flex items-center gap-1">
+                                <i class="fa-solid fa-arrow-trend-up"></i>
+                                <span class="font-medium">18% from last week</span>
+                            </div>
+                        </div>
+                        
+                        <div class="bg-white rounded-3xl p-6 card-hover">
+                            <div class="flex justify-between">
+                                <div>
+                                    <div class="text-xs tracking-widest font-medium text-zinc-400">ACTIVE ENDPOINTS</div>
+                                    <div class="text-5xl font-semibold mt-2 text-zinc-900">124</div>
+                                </div>
+                                <div class="w-12 h-12 bg-emerald-100 rounded-2xl flex items-center justify-center text-3xl">🖥️</div>
+                            </div>
+                            <div class="mt-8 text-amber-600 text-sm flex items-center gap-1">
+                                <i class="fa-solid fa-arrow-trend-down"></i>
+                                <span class="font-medium">-3 offline</span>
+                            </div>
+                        </div>
+                        
+                        <div class="bg-white rounded-3xl p-6 card-hover relative overflow-hidden">
+                            <div class="flex justify-between">
+                                <div>
+                                    <div class="text-xs tracking-widest font-medium text-zinc-400">SUCCESS RATE</div>
+                                    <div class="text-5xl font-semibold mt-2 text-emerald-600">98.4%</div>
+                                </div>
+                                <div class="w-12 h-12 bg-emerald-100 rounded-2xl flex items-center justify-center text-3xl">✅</div>
+                            </div>
+                            <div class="absolute bottom-6 right-6 text-[10px] font-mono bg-white shadow px-3 py-1 rounded-2xl text-emerald-700">
+                                1,289 / 1,342
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Charts -->
+                    <div class="grid grid-cols-2 gap-6 mt-8">
+                        <!-- Top Scripts Bar -->
+                        <div class="bg-white rounded-3xl p-6">
+                            <div class="flex items-center justify-between mb-6">
+                                <div class="font-semibold">Top Scripts by Executions</div>
+                                <select onchange="updateTopScriptsChart(this)" class="bg-zinc-100 text-xs rounded-2xl px-4 py-1 outline-none">
+                                    <option value="30">Last 30 days</option>
+                                    <option value="7" selected>Last 7 days</option>
+                                </select>
+                            </div>
+                            <canvas id="topScriptsChart" class="h-80"></canvas>
+                        </div>
+
+                        <!-- Executions Trend -->
+                        <div class="bg-white rounded-3xl p-6">
+                            <div class="flex items-center justify-between mb-6">
+                                <div class="font-semibold">Daily Executions Trend</div>
+                                <div class="text-xs text-zinc-400">Feb 2026</div>
+                            </div>
+                            <canvas id="trendChart" class="h-80"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- Recent Activity -->
+                    <div class="mt-8 bg-white rounded-3xl">
+                        <div class="px-8 pt-6 pb-4 border-b flex justify-between items-center">
+                            <div class="font-semibold">Recent Executions</div>
+                            <button onclick="showTab('logs')" 
+                                    class="text-xs flex items-center gap-1 text-yellow-600 hover:text-yellow-700">
+                                View all logs <i class="fa-solid fa-arrow-right text-xs"></i>
+                            </button>
+                        </div>
+                        <table class="w-full">
+                            <thead>
+                                <tr class="border-b">
+                                    <th class="text-left py-4 px-8 text-xs font-medium text-zinc-400">COMPUTER</th>
+                                    <th class="text-left py-4 px-4 text-xs font-medium text-zinc-400">SCRIPT</th>
+                                    <th class="text-left py-4 px-4 text-xs font-medium text-zinc-400">STATUS</th>
+                                    <th class="text-left py-4 px-4 text-xs font-medium text-zinc-400">TIME</th>
+                                    <th class="w-10"></th>
+                                </tr>
+                            </thead>
+                            <tbody id="recent-table" class="text-sm">
+                                <!-- Populated by JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- SCRIPTS TAB -->
+                <div id="content-scripts" class="tab-content p-8 hidden">
+                    <div class="bg-white rounded-3xl">
+                        <div class="px-8 py-6 border-b flex items-center justify-between">
+                            <div class="font-semibold text-lg">All Custom Scripts (56)</div>
+                            <div class="flex gap-3">
+                                <input id="script-search" type="text" placeholder="Filter scripts..." 
+                                       class="bg-zinc-100 border-0 rounded-3xl px-5 py-3 text-sm w-80 focus:ring-1 focus:ring-yellow-300">
+                                <button onclick="alert('Filter modal would open here')" 
+                                        class="px-5 rounded-3xl border flex items-center gap-2">
+                                    <i class="fa-solid fa-sliders"></i>
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <table class="w-full">
+                            <thead>
+                                <tr class="bg-zinc-50 border-b">
+                                    <th class="text-left pl-8 py-5 text-xs font-medium text-zinc-400">SCRIPT NAME</th>
+                                    <th class="text-left py-5 text-xs font-medium text-zinc-400">TYPE</th>
+                                    <th class="text-right pr-8 py-5 text-xs font-medium text-zinc-400">EXECUTIONS</th>
+                                    <th class="text-left pl-8 py-5 text-xs font-medium text-zinc-400">LAST EXECUTED</th>
+                                    <th class="w-40"></th>
+                                </tr>
+                            </thead>
+                            <tbody class="text-sm divide-y" id="scripts-table">
+                                <!-- Populated by JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- ENDPOINTS TAB -->
+                <div id="content-endpoints" class="tab-content p-8 hidden">
+                    <div class="bg-white rounded-3xl overflow-hidden">
+                        <div class="px-8 py-6 border-b flex items-center justify-between">
+                            <div class="font-semibold text-lg">Managed Endpoints (124)</div>
+                            <div class="text-xs px-4 py-2 bg-emerald-100 text-emerald-700 rounded-3xl">98% online</div>
+                        </div>
+                        <table class="w-full">
+                            <thead>
+                                <tr class="bg-zinc-50">
+                                    <th class="pl-8 py-5 text-left text-xs font-medium text-zinc-400">COMPUTER NAME</th>
+                                    <th class="py-5 text-left text-xs font-medium text-zinc-400">LAST REPORTED</th>
+                                    <th class="py-5 text-center text-xs font-medium text-zinc-400">SCRIPTS RUN</th>
+                                    <th class="py-5 text-left text-xs font-medium text-zinc-400">LAST SCRIPT</th>
+                                    <th class="pr-8 w-40"></th>
+                                </tr>
+                            </thead>
+                            <tbody id="endpoints-table" class="text-sm divide-y">
+                                <!-- Populated by JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- LOGS TAB -->
+                <div id="content-logs" class="tab-content p-8 hidden">
+                    <div class="bg-white rounded-3xl">
+                        <div class="px-8 py-6 border-b flex justify-between items-center">
+                            <div class="font-semibold">Execution History</div>
+                            <div class="flex items-center gap-4 text-sm">
+                                <div class="flex items-center gap-2">
+                                    <span class="text-zinc-400">Show</span>
+                                    <select class="bg-white border rounded-2xl px-4 py-2 text-sm">
+                                        <option>30 days</option>
+                                        <option selected>90 days</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="overflow-auto max-h-[calc(100vh-280px)]">
+                            <table class="w-full">
+                                <thead class="sticky top-0 bg-white">
+                                    <tr class="border-b bg-zinc-50">
+                                        <th class="pl-8 py-4 text-left text-xs font-medium text-zinc-400">COMPUTER</th>
+                                        <th class="py-4 text-left text-xs font-medium text-zinc-400">TASK / SCRIPT</th>
+                                        <th class="py-4 text-left text-xs font-medium text-zinc-400">STATUS</th>
+                                        <th class="py-4 text-left text-xs font-medium text-zinc-400">INITIATED BY</th>
+                                        <th class="py-4 text-left text-xs font-medium text-zinc-400">COMPLETED</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="logs-table" class="text-sm divide-y">
+                                    <!-- Populated by JS -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- OUTPUTS TAB -->
+                <div id="content-outputs" class="tab-content p-8 hidden">
+                    <div class="max-w-2xl mx-auto">
+                        <div class="bg-white rounded-3xl p-8">
+                            <label class="block text-xs tracking-widest font-medium text-zinc-400 mb-2">SELECT SCRIPT TO VIEW OUTPUTS</label>
+                            <select id="output-script-select" onchange="loadScriptOutputs()" 
+                                    class="w-full bg-zinc-50 border border-transparent focus:border-yellow-300 rounded-3xl px-6 py-5 text-lg outline-none">
+                                <!-- Populated by JS -->
+                            </select>
+
+                            <div id="output-container" class="mt-10">
+                                <!-- Dynamic content loaded here -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- FOOTER BAR -->
+            <div class="h-14 bg-white border-t flex items-center px-8 text-xs text-zinc-400">
+                <div>DeepFreeze Cloud • Custom Scripts Analytics Demo • Feb 24, 2026 11:16 AM PST</div>
+                <div class="flex-1"></div>
+                <div class="flex items-center gap-6">
+                    <span class="cursor-pointer hover:text-zinc-600">Help Center</span>
+                    <span class="cursor-pointer hover:text-zinc-600">Feedback</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SCRIPT DETAIL MODAL -->
+    <div id="script-modal" class="hidden fixed inset-0 bg-black/60 flex items-center justify-center z-50">
+        <div class="modal bg-white w-[780px] rounded-3xl shadow-2xl max-h-[90vh] overflow-hidden">
+            <div class="px-8 py-6 border-b flex items-center justify-between">
+                <div>
+                    <div id="modal-script-name" class="font-semibold text-xl"></div>
+                    <div id="modal-script-type" class="text-xs text-zinc-400"></div>
+                </div>
+                <button onclick="closeModal()" class="text-2xl text-zinc-300 hover:text-zinc-500">×</button>
+            </div>
+            
+            <div class="p-8 overflow-auto max-h-[calc(90vh-140px)]" id="modal-content">
+                <!-- Filled by JS -->
+            </div>
+            
+            <div class="border-t px-8 py-5 flex justify-end">
+                <button onclick="closeModal()" 
+                        class="px-10 py-3.5 text-sm font-medium border rounded-3xl">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Tailwind script already loaded
+        
+        function initTailwind() {
+            // Already configured via CDN
+        }
+        
+        // Fake data
+        const scriptsData = [
+            {
+                id: 1,
+                name: "AnyAppShrcut",
+                type: "PowerShell",
+                executions: 312,
+                lastExecuted: "Feb 23, 2026 14:22",
+                color: "blue"
+            },
+            {
+                id: 2,
+                name: "Rename Computer",
+                type: "PowerShell",
+                executions: 245,
+                lastExecuted: "Feb 23, 2026 11:45",
+                color: "amber"
+            },
+            {
+                id: 3,
+                name: "Create Admin",
+                type: "PowerShell",
+                executions: 189,
+                lastExecuted: "Feb 22, 2026 09:12",
+                color: "emerald"
+            },
+            {
+                id: 4,
+                name: "Set Wallpaper",
+                type: "PowerShell",
+                executions: 156,
+                lastExecuted: "Feb 23, 2026 16:05",
+                color: "purple"
+            },
+            {
+                id: 5,
+                name: "Enable RDP",
+                type: "Batch Script",
+                executions: 98,
+                lastExecuted: "Feb 21, 2026 08:30",
+                color: "rose"
+            }
+        ]
+        
+        const endpointsData = [
+            { name: "DESKTOP-41V3C0M", last: "24 Feb 2026 11:04", scripts: 23, lastScript: "AnyAppShrcut" },
+            { name: "DESKTOP-EK9EH9D", last: "24 Feb 2026 10:56", scripts: 19, lastScript: "GetDHCP info" },
+            { name: "LAPTOP-MK-2025", last: "23 Feb 2026 17:12", scripts: 14, lastScript: "Set Wallpaper" },
+            { name: "VM-WIN11-TEST", last: "22 Feb 2026 14:33", scripts: 8, lastScript: "Create Admin" }
+        ]
+        
+        const logsData = [
+            {
+                computer: "DESKTOP-41V3C0M",
+                task: "Install Application (AnyAppShrcut)",
+                status: "Executed",
+                initiated: "mkanchwala@faronics.com",
+                completed: "19 Feb 2026 10:33:31 AM"
+            },
+            {
+                computer: "DESKTOP-EK9EH9D",
+                task: "Install Application (GetDHCP info)",
+                status: "Executed",
+                initiated: "mkanchwala@faronics.com",
+                completed: "18 Feb 2026 09:42:52 AM"
+            }
+        ]
+        
+        // Chart instances
+        let topScriptsChartInstance = null
+        let trendChartInstance = null
+        
+        function createTopScriptsChart() {
+            const ctx = document.getElementById('topScriptsChart')
+            if (!ctx) return
+            
+            if (topScriptsChartInstance) topScriptsChartInstance.destroy()
+            
+            topScriptsChartInstance = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['AnyAppShrcut', 'Rename Computer', 'Create Admin', 'Set Wallpaper', 'Enable RDP'],
+                    datasets: [{
+                        label: 'Executions',
+                        data: [312, 245, 189, 156, 98],
+                        backgroundColor: '#eab308',
+                        borderColor: '#eab308',
+                        borderWidth: 0,
+                        borderRadius: 8
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: { mode: 'index', intersect: false }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            grid: { color: '#f1f1f1' }
+                        },
+                        x: {
+                            grid: { display: false }
+                        }
+                    }
+                }
+            })
+        }
+        
+        function createTrendChart() {
+            const ctx = document.getElementById('trendChart')
+            if (!ctx) return
+            
+            if (trendChartInstance) trendChartInstance.destroy()
+            
+            const labels = []
+            for (let i = 23; i >= 0; i--) {
+                labels.push(`Feb ${24-i}`)
+            }
+            
+            const data = [42, 51, 38, 67, 55, 72, 81, 64, 49, 58, 73, 89, 76, 61, 55, 48, 66, 79, 92, 84, 70, 59, 47, 53]
+            
+            trendChartInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Executions',
+                        data: data,
+                        borderColor: '#eab308',
+                        tension: 0.4,
+                        borderWidth: 3,
+                        pointRadius: 0,
+                        pointHoverRadius: 5
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        y: { grid: { color: '#f1f1f1' } },
+                        x: { grid: { display: false } }
+                    }
+                }
+            })
+        }
+        
+        function populateRecentTable() {
+            const tbody = document.getElementById('recent-table')
+            tbody.innerHTML = `
+                <tr class="hover:bg-yellow-50 transition-colors">
+                    <td class="pl-8 py-5 font-medium">DESKTOP-41V3C0M</td>
+                    <td class="px-4 py-5">AnyAppShrcut</td>
+                    <td class="px-4 py-5"><span class="inline-flex items-center gap-1 text-emerald-600"><i class="fa-solid fa-check-circle"></i> Success</span></td>
+                    <td class="px-4 py-5 text-zinc-400 text-sm">11:04 AM</td>
+                    <td class="pr-8 text-right"><button onclick="viewLogDetail()" class="text-yellow-600 text-xs font-medium">DETAILS →</button></td>
+                </tr>
+                <tr class="hover:bg-yellow-50 transition-colors">
+                    <td class="pl-8 py-5 font-medium">DESKTOP-EK9EH9D</td>
+                    <td class="px-4 py-5">GetDHCP info</td>
+                    <td class="px-4 py-5"><span class="inline-flex items-center gap-1 text-emerald-600"><i class="fa-solid fa-check-circle"></i> Success</span></td>
+                    <td class="px-4 py-5 text-zinc-400 text-sm">10:56 AM</td>
+                    <td class="pr-8 text-right"><button onclick="viewLogDetail()" class="text-yellow-600 text-xs font-medium">DETAILS →</button></td>
+                </tr>
+            `
+        }
+        
+        function populateScriptsTable() {
+            const tbody = document.getElementById('scripts-table')
+            tbody.innerHTML = ''
+            
+            scriptsData.forEach(script => {
+                const tr = document.createElement('tr')
+                tr.className = 'hover:bg-zinc-50 transition-colors group'
+                tr.innerHTML = `
+                    <td class="pl-8 py-6 font-medium">${script.name}</td>
+                    <td class="py-6">
+                        <span class="inline-block px-4 py-1 text-xs rounded-3xl bg-zinc-100">${script.type}</span>
+                    </td>
+                    <td class="py-6 text-right pr-8 font-semibold">${script.executions}</td>
+                    <td class="py-6 pl-8 text-sm text-zinc-500">${script.lastExecuted}</td>
+                    <td class="pr-8 text-right">
+                        <button onclick="showScriptModal(${script.id})" 
+                                class="px-6 py-2 text-xs font-medium bg-white border border-transparent group-hover:border-yellow-300 rounded-3xl transition-all">
+                            VIEW EXECUTIONS
+                        </button>
+                    </td>
+                `
+                tbody.appendChild(tr)
+            })
+        }
+        
+        function populateEndpointsTable() {
+            const tbody = document.getElementById('endpoints-table')
+            tbody.innerHTML = ''
+            
+            endpointsData.forEach(ep => {
+                const tr = document.createElement('tr')
+                tr.className = 'hover:bg-zinc-50'
+                tr.innerHTML = `
+                    <td class="pl-8 py-6 font-medium">${ep.name}</td>
+                    <td class="py-6 text-sm text-zinc-500">${ep.last}</td>
+                    <td class="py-6 text-center font-semibold">${ep.scripts}</td>
+                    <td class="py-6 text-sm">${ep.lastScript}</td>
+                    <td class="pr-8 text-right">
+                        <button onclick="alert('Endpoint detail view would open here for ${ep.name}')" 
+                                class="text-xs px-5 py-2 border border-zinc-300 hover:border-yellow-400 rounded-3xl">DETAILS</button>
+                    </td>
+                `
+                tbody.appendChild(tr)
+            })
+        }
+        
+        function populateLogsTable() {
+            const tbody = document.getElementById('logs-table')
+            tbody.innerHTML = ''
+            
+            logsData.forEach(log => {
+                const tr = document.createElement('tr')
+                tr.className = 'hover:bg-zinc-50'
+                tr.innerHTML = `
+                    <td class="pl-8 py-5 font-medium">${log.computer}</td>
+                    <td class="py-5">${log.task}</td>
+                    <td class="py-5">
+                        <span class="px-5 py-1 text-xs font-medium rounded-full bg-emerald-100 text-emerald-700">${log.status}</span>
+                    </td>
+                    <td class="py-5 text-sm">${log.initiated}</td>
+                    <td class="py-5 text-sm text-zinc-500">${log.completed}</td>
+                `
+                tbody.appendChild(tr)
+            })
+        }
+        
+        function populateOutputSelect() {
+            const select = document.getElementById('output-script-select')
+            select.innerHTML = `<option value="">— Choose a script —</option>`
+            
+            scriptsData.forEach(s => {
+                const opt = document.createElement('option')
+                opt.value = s.id
+                opt.textContent = s.name
+                select.appendChild(opt)
+            })
+        }
+        
+        function loadScriptOutputs() {
+            const select = document.getElementById('output-script-select')
+            const container = document.getElementById('output-container')
+            
+            if (!select.value) {
+                container.innerHTML = `<div class="text-center py-20 text-zinc-300">Select a script above to see raw console outputs across all endpoints</div>`
+                return
+            }
+            
+            const selected = scriptsData.find(s => s.id == select.value)
+            
+            container.innerHTML = `
+                <div class="bg-zinc-900 text-emerald-400 font-mono text-sm p-6 rounded-3xl overflow-auto max-h-96">
+                    <div class="flex justify-between text-xs text-zinc-500 mb-4">
+                        <div>DESKTOP-41V3C0M • ${selected.lastExecuted}</div>
+                        <div>Exit code: 0</div>
+                    </div>
+                    <div class="opacity-90">
+                        Shortcut created successfully at C:\\Users\\Public\\Desktop\\Launch Tabe Portal.url<br>
+                        Registry updated for wallpaper policy.<br>
+                        RDP port opened on firewall.<br><br>
+                        <span class="text-amber-300">=== SCRIPT OUTPUT COMPLETE ===</span>
+                    </div>
+                    
+                    <div class="mt-10 pt-6 border-t border-zinc-700 flex justify-between text-xs text-zinc-500">
+                        <div>DESKTOP-EK9EH9D • 22 Feb 2026</div>
+                        <div>Exit code: 0</div>
+                    </div>
+                    <div class="opacity-90 mt-2">
+                        Success: Computer renamed to DESKTOP-NEW-TEST<br>
+                        Operation completed in 2.34 seconds.
+                    </div>
+                </div>
+                
+                <div class="text-center mt-6">
+                    <button onclick="alert('Full export would download here')" 
+                            class="text-xs px-8 py-4 border border-dashed border-zinc-300 rounded-3xl hover:bg-white">
+                        📥 Download full output log (JSON + TXT)
+                    </button>
+                </div>
+            `
+        }
+        
+        function showScriptModal(id) {
+            const script = scriptsData.find(s => s.id === id)
+            if (!script) return
+            
+            document.getElementById('modal-script-name').textContent = script.name
+            document.getElementById('modal-script-type').innerHTML = `
+                <span class="inline-flex items-center gap-1.5">
+                    <span class="w-2 h-2 bg-${script.color}-500 rounded-full"></span>
+                    ${script.type} • ${script.executions} executions
+                </span>
+            `
+            
+            const modalContent = document.getElementById('modal-content')
+            modalContent.innerHTML = `
+                <div class="text-sm mb-6">Executed on 42 endpoints</div>
+                
+                <div class="space-y-6">
+                    <div class="flex justify-between items-center border-b pb-4">
+                        <div>
+                            <div class="font-medium">DESKTOP-41V3C0M</div>
+                            <div class="text-xs text-zinc-400">Feb 23 2026 • 14:22 PST</div>
+                        </div>
+                        <div class="text-right">
+                            <div class="text-emerald-600 text-xs font-medium">SUCCESS • 3.2s</div>
+                            <button onclick="viewOutputInModal()" class="text-[10px] mt-1 underline">View raw output</button>
+                        </div>
+                    </div>
+                    
+                    <div class="flex justify-between items-center border-b pb-4">
+                        <div>
+                            <div class="font-medium">DESKTOP-EK9EH9D</div>
+                            <div class="text-xs text-zinc-400">Feb 22 2026 • 09:12 PST</div>
+                        </div>
+                        <div class="text-right">
+                            <div class="text-emerald-600 text-xs font-medium">SUCCESS • 1.8s</div>
+                            <button onclick="viewOutputInModal()" class="text-[10px] mt-1 underline">View raw output</button>
+                        </div>
+                    </div>
+                </div>
+            `
+            document.getElementById('script-modal').classList.remove('hidden')
+            document.getElementById('script-modal').classList.add('flex')
+        }
+        
+        function closeModal() {
+            const modal = document.getElementById('script-modal')
+            modal.classList.add('hidden')
+            modal.classList.remove('flex')
+        }
+        
+        function viewOutputInModal() {
+            alert("📋 Full console output:\n\nShortcut created successfully at C:\\Users\\Public\\Desktop\\Launch Tabe Portal.url\n\nProcess exited with code 0")
+        }
+        
+        function viewLogDetail() {
+            alert("🔍 Detailed execution log would open in a side panel here (demo)")
+        }
+        
+        function showTab(tab) {
+            // Hide all
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'))
+            // Show target
+            document.getElementById(`content-${tab}`).classList.remove('hidden')
+            
+            // Update tab styles
+            document.querySelectorAll('.tab-button').forEach(btn => {
+                btn.classList.remove('tab-active')
+                if (btn.id === `tab-${tab}`) btn.classList.add('tab-active')
+            })
+            
+            // Refresh charts when overview is shown
+            if (tab === 'overview') {
+                setTimeout(() => {
+                    createTopScriptsChart()
+                    createTrendChart()
+                }, 50)
+            }
+        }
+        
+        function updateTopScriptsChart(select) {
+            // Demo only - would refetch data in real app
+            alert(`Showing data for ${select.value} days (demo)`)
+        }
+        
+        function refreshDashboard() {
+            const btns = document.querySelectorAll('.fa-rotate')
+            btns.forEach(b => b.classList.add('animate-spin'))
+            setTimeout(() => {
+                btns.forEach(b => b.classList.remove('animate-spin'))
+                alert("✅ Dashboard refreshed with latest data (Feb 24, 2026)")
+            }, 1200)
+        }
+        
+        function exportData() {
+            alert("📤 CSV export started...\n\ncustom-scripts-analytics-feb-2026.csv (demo)")
+        }
+        
+        function openNewScriptModal() {
+            alert("🛠️ New Custom Script wizard would open here.\n\n(You can already see the list in the real console)")
+        }
+        
+        function searchEverything() {
+            const query = document.getElementById('global-search').value.trim()
+            if (!query) return
+            alert(`🔎 Searching for "${query}" across scripts, endpoints & logs... (demo)`)
+        }
+        
+        function filterByStatus(el) {
+            document.querySelectorAll('.bg-zinc-50').forEach(e => e.classList.remove('!border-yellow-300'))
+            el.classList.add('!border-yellow-300')
+        }
+        
+        // Initialize everything
+        window.onload = function() {
+            // Tailwind already active
+            
+            // Populate tables
+            populateRecentTable()
+            populateScriptsTable()
+            populateEndpointsTable()
+            populateLogsTable()
+            populateOutputSelect()
+            
+            // Create charts (overview is default)
+            createTopScriptsChart()
+            createTrendChart()
+            
+            // Show default tab
+            showTab('overview')
+            
+            // Keyboard shortcut hint
+            console.log('%cCustom Scripts Analytics Mockup ready 🚀\nPress "/" to focus search', 'color:#eab308; font-family:monospace')
+            
+            // Demo: auto focus search after 2s
+            setTimeout(() => {
+                document.getElementById('global-search').focus()
+            }, 1800)
+        }
+    </script>
+</body>
+</html>
